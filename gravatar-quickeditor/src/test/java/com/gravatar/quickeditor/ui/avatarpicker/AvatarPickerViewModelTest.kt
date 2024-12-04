@@ -921,6 +921,47 @@ class AvatarPickerViewModelTest {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
+    fun `given avatar already deleted when delete returns 404 then uiState is updated`() = runTest {
+        val emailAvatarsCopy = emailAvatars.copy(avatars = avatars, selectedAvatarId = avatars.first().imageId)
+        coEvery { avatarRepository.getAvatars(email) } returns GravatarResult.Success(emailAvatarsCopy)
+        coEvery { profileService.retrieveCatching(email) } returns GravatarResult.Success(profile)
+        coEvery { avatarRepository.deleteAvatar(any(), any()) } returns
+            GravatarResult.Failure(QuickEditorError.Request(ErrorType.NotFound))
+
+        viewModel = initViewModel()
+
+        advanceUntilIdle()
+
+        viewModel.uiState.test {
+            expectMostRecentItem()
+            val avatarToDelete = avatars.first()
+            viewModel.onEvent(AvatarPickerEvent.AvatarDeleteSelected(avatarToDelete.imageId))
+            var avatarPickerUiState = AvatarPickerUiState(
+                email = email,
+                emailAvatars = emailAvatarsCopy.copy(avatars = avatars.minus(avatarToDelete), selectedAvatarId = null),
+                error = null,
+                profile = ComponentState.Loaded(profile),
+                avatarPickerContentLayout = avatarPickerContentLayout,
+                avatarUpdates = 0,
+                scrollToIndex = 0,
+            )
+            assertEquals(
+                avatarPickerUiState,
+                awaitItem(),
+            )
+
+            avatarPickerUiState = avatarPickerUiState.copy(
+                avatarUpdates = 1,
+            )
+            assertEquals(
+                avatarPickerUiState,
+                awaitItem(),
+            )
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
     fun `given avatar when download queued then AvatarDownloadStarted sent`() = runTest {
         val emailAvatarsCopy = emailAvatars.copy(avatars = avatars, selectedAvatarId = "1")
         coEvery { avatarRepository.getAvatars(email) } returns GravatarResult.Success(emailAvatarsCopy)
