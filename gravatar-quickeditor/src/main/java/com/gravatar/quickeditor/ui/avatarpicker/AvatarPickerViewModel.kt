@@ -298,39 +298,56 @@ internal class AvatarPickerViewModel(
                         ),
                     )
                 }
-                when (avatarRepository.deleteAvatar(email, avatarId)) {
+                when (val result = avatarRepository.deleteAvatar(email, avatarId)) {
                     is GravatarResult.Success -> {
-                        _actions.send(AvatarPickerAction.AvatarSelected)
-                        _uiState.update { currentState ->
-                            currentState.copy(
-                                avatarUpdates = if (isSelectedAvatar) {
-                                    currentState.avatarUpdates.inc()
-                                } else {
-                                    currentState.avatarUpdates
-                                },
-                            )
-                        }
+                        notifyAvatarDeletedSuccessfully(isSelectedAvatar)
                     }
 
                     is GravatarResult.Failure -> {
-                        _actions.send(AvatarPickerAction.AvatarDeletionFailed(avatarId))
-                        _uiState.update { currentState ->
-                            currentState.copy(
-                                emailAvatars = currentState.emailAvatars?.copy(
-                                    avatars = currentState.emailAvatars.avatars.toMutableList().apply {
-                                        add(avatarIndex, avatar)
-                                    },
-                                    selectedAvatarId = if (isSelectedAvatar) {
-                                        avatarId
-                                    } else {
-                                        currentState.emailAvatars.selectedAvatarId
-                                    },
-                                ),
-                            )
+                        if ((result.error as? QuickEditorError.Request)?.type == ErrorType.NotFound) {
+                            notifyAvatarDeletedSuccessfully(isSelectedAvatar)
+                        } else {
+                            notifyAvatarDeletionFailure(avatarId, avatarIndex, avatar, isSelectedAvatar)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun notifyAvatarDeletionFailure(
+        avatarId: String,
+        avatarIndex: Int,
+        avatar: Avatar,
+        isSelectedAvatar: Boolean,
+    ) {
+        _actions.send(AvatarPickerAction.AvatarDeletionFailed(avatarId))
+        _uiState.update { currentState ->
+            currentState.copy(
+                emailAvatars = currentState.emailAvatars?.copy(
+                    avatars = currentState.emailAvatars.avatars.toMutableList().apply {
+                        add(avatarIndex, avatar)
+                    },
+                    selectedAvatarId = if (isSelectedAvatar) {
+                        avatarId
+                    } else {
+                        currentState.emailAvatars.selectedAvatarId
+                    },
+                ),
+            )
+        }
+    }
+
+    private suspend fun notifyAvatarDeletedSuccessfully(isSelectedAvatar: Boolean) {
+        _actions.send(AvatarPickerAction.AvatarSelected)
+        _uiState.update { currentState ->
+            currentState.copy(
+                avatarUpdates = if (isSelectedAvatar) {
+                    currentState.avatarUpdates.inc()
+                } else {
+                    currentState.avatarUpdates
+                },
+            )
         }
     }
 
