@@ -5,7 +5,7 @@ Plural-Forms: nplurals=1; plural=0;
 Generator: GlotPress/2.4.0-alpha
 Language: ja_JP
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="gravatar_qe_write_external_storage_permission_rationale_message">パブリックフォルダーに画像を保存するには、パーミッションを付与する必要があります。 アプリの設定でパーミッションを付与できます。</string>
     <string name="gravatar_qe_download_manager_disabled_title">DownloadManager は無効です。 アバターをダウンロードするには、有効にしてください。</string>
     <string name="gravatar_qe_download_manager_not_available">DownloadManager は利用できません。</string>
@@ -36,8 +36,8 @@ Language: ja_JP
     <string name="gravatar_qe_avatar_upload_error_action">再試行</string>
     <string name="gravatar_qe_avatar_picker_title">アバター</string>
     <string name="gravatar_qe_bottom_sheet_done">完了</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description">代替テキスト</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text">代替テキスト</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description" tools:ignore="UnusedResources">代替テキスト</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text" tools:ignore="UnusedResources">代替テキスト</string>
     <string name="gravatar_qe_selectable_avatar_more_options_content_description">追加オプション</string>
     <string name="gravatar_qe_selectable_avatar_content_description">アバター画像</string>
     <string name="gravatar_qe_gravatar">Gravatar</string>
