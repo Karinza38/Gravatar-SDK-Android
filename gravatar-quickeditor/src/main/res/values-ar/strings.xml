@@ -5,7 +5,7 @@ Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%
 Generator: GlotPress/2.4.0-alpha
 Language: ar
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="gravatar_qe_write_external_storage_permission_rationale_message">لحفظ الصورة في مجلد عام، يتعين عليك منح الصلاحية. يمكنك منحها ضمن إعدادات التطبيق.</string>
     <string name="gravatar_qe_download_manager_disabled_title">تم تعطيل DownloadManager. يرجى تمكينها لتنزيل الصور الرمزية.</string>
     <string name="gravatar_qe_download_manager_not_available">DownloadManager غير متوفر</string>
@@ -36,10 +36,10 @@ Language: ar
     <string name="gravatar_qe_avatar_upload_error_action">إعادة المحاولة</string>
     <string name="gravatar_qe_avatar_picker_title">الصور الرمزية</string>
     <string name="gravatar_qe_bottom_sheet_done">تم</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text">النص البديل</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description" tools:ignore="UnusedResources">النص البديل</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text" tools:ignore="UnusedResources">النص البديل</string>
     <string name="gravatar_qe_selectable_avatar_more_options_content_description">مزيد من الخيارات</string>
     <string name="gravatar_qe_selectable_avatar_content_description">صورة رمزية</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description">النص البديل</string>
     <string name="gravatar_qe_gravatar">جرافتار</string>
     <string name="gravatar_qe_avatar_upload_failure_image_too_big">تتجاوز الصورة المتوفرة الحد الأقصى للحجم: 10 ميجابايت</string>
     <string name="gravatar_qe_dismiss">تجاهل</string>

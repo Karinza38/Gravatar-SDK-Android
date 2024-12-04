@@ -5,7 +5,7 @@ Plural-Forms: nplurals=2; plural=n != 1;
 Generator: GlotPress/2.4.0-alpha
 Language: es
 -->
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="gravatar_qe_write_external_storage_permission_rationale_message">Para guardar la imagen en una carpeta pública, tienes que otorgar el permiso para ello. Puedes hacerlo en los ajustes de la aplicación.</string>
     <string name="gravatar_qe_download_manager_disabled_title">DownloadManager se ha inhabilitado. Habilítalo para descargar avatares.</string>
     <string name="gravatar_qe_download_manager_not_available">DownloadManager no está disponible.</string>
@@ -36,8 +36,8 @@ Language: es
     <string name="gravatar_qe_avatar_upload_error_action">Reintentar</string>
     <string name="gravatar_qe_avatar_picker_title">Avatares</string>
     <string name="gravatar_qe_bottom_sheet_done">Hecho</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description">Texto alternativo</string>
-    <string name="gravatar_qe_selectable_avatar_more_options_alt_text">Texto alt</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text_content_description" tools:ignore="UnusedResources">Texto alternativo</string>
+    <string name="gravatar_qe_selectable_avatar_more_options_alt_text" tools:ignore="UnusedResources">Texto alt</string>
     <string name="gravatar_qe_selectable_avatar_more_options_content_description">Más opciones</string>
     <string name="gravatar_qe_selectable_avatar_content_description">Imagen de avatar</string>
     <string name="gravatar_qe_gravatar">Gravatar</string>
