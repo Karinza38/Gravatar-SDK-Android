@@ -1,0 +1,52 @@
+name: Build and Deploy API Documentation
+
+on:
+  push:
+    tags:
+      # Match 1.0.0 but not 1.0.0-rc1 or other suffixes
+      - '[1-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  generate_docs:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout the branch with the latest code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          path: 'code'
+      - name: Checkout the branch with the docs
+        uses: actions/checkout@v4
+        with:
+          ref: 'docs'
+          path: 'docs'
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - name: Copy docs to the code directory
+        run: |
+          mkdir -p ./code/docs/dokka
+          cp -R ./docs/current ./code/docs/dokka
+          cp -R ./docs/history ./code/docs/dokka
+      - name: Generate Dokka Documentation
+        working-directory: ./code
+        run: ./gradlew dokkaHtmlMultiModule
+      - name: Update Docs
+        run: |
+          cp -R code/docs/dokka/history docs/
+          cp -R code/docs/dokka/current docs/
+      - name: Push updated docs
+        working-directory: ./docs
+        run: |
+          git add history
+          git add current
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git commit -m "Update API documentation for ${{ github.ref_name }}"
+          git push origin docs

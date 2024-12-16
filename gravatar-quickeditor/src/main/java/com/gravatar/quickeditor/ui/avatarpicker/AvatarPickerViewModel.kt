@@ -20,7 +20,6 @@ import com.gravatar.services.ProfileService
 import com.gravatar.types.Email
 import com.gravatar.ui.components.ComponentState
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,10 +42,6 @@ internal class AvatarPickerViewModel(
     private val imageDownloader: ImageDownloader,
     private val fileUtils: FileUtils,
 ) : ViewModel() {
-    private companion object {
-        const val AVATAR_SWITCH_DELAY = 800L
-    }
-
     private val _uiState =
         MutableStateFlow(AvatarPickerUiState(email = email, avatarPickerContentLayout = avatarPickerContentLayout))
     val uiState: StateFlow<AvatarPickerUiState> = _uiState.asStateFlow()
@@ -188,9 +183,6 @@ internal class AvatarPickerViewModel(
                 }
                 when (avatarRepository.selectAvatar(email, avatarId)) {
                     is GravatarResult.Success -> {
-                        // Delay to wait until the server has updated the selected avatar before updating the UI
-                        // Hopefully, we can remove this delay soon
-                        delay(AVATAR_SWITCH_DELAY)
                         _uiState.update { currentState ->
                             val emailAvatars = currentState.emailAvatars?.copy(selectedAvatarId = avatarId)
                             currentState.copy(
@@ -357,43 +349,59 @@ internal class AvatarPickerViewModel(
                     )
                     currentState.copy(
                         emailAvatars = emailAvatars,
-                        avatarUpdates = if (isSelectedAvatar) {
-                            currentState.avatarUpdates.inc()
-                        } else {
-                            currentState.avatarUpdates
-                        },
                     )
                 }
-                when (avatarRepository.deleteAvatar(email, avatarId)) {
+                when (val result = avatarRepository.deleteAvatar(email, avatarId)) {
                     is GravatarResult.Success -> {
-                        // As we've already updated the UI, we don't need to do anything here
+                        notifyAvatarDeletedSuccessfully(isSelectedAvatar)
                     }
 
                     is GravatarResult.Failure -> {
-                        _actions.send(AvatarPickerAction.AvatarDeletionFailed(avatarId))
-                        _uiState.update { currentState ->
-                            val emailAvatars = currentState.emailAvatars?.copy(
-                                avatars = currentState.emailAvatars.avatars.toMutableList().apply {
-                                    add(avatarIndex, avatar)
-                                },
-                                selectedAvatarId = if (isSelectedAvatar) {
-                                    avatarId
-                                } else {
-                                    currentState.emailAvatars.selectedAvatarId
-                                },
-                            )
-                            currentState.copy(
-                                emailAvatars = emailAvatars,
-                                avatarUpdates = if (isSelectedAvatar) {
-                                    currentState.avatarUpdates.inc()
-                                } else {
-                                    currentState.avatarUpdates
-                                },
-                            )
+                        if ((result.error as? QuickEditorError.Request)?.type == ErrorType.NotFound) {
+                            notifyAvatarDeletedSuccessfully(isSelectedAvatar)
+                        } else {
+                            notifyAvatarDeletionFailure(avatarId, avatarIndex, avatar, isSelectedAvatar)
                         }
                     }
                 }
             }
+        }
+    }
+
+    private suspend fun notifyAvatarDeletionFailure(
+        avatarId: String,
+        avatarIndex: Int,
+        avatar: Avatar,
+        isSelectedAvatar: Boolean,
+    ) {
+        _actions.send(AvatarPickerAction.AvatarDeletionFailed(avatarId))
+        _uiState.update { currentState ->
+            val emailAvatars = currentState.emailAvatars?.copy(
+                avatars = currentState.emailAvatars.avatars.toMutableList().apply {
+                    add(avatarIndex, avatar)
+                },
+                selectedAvatarId = if (isSelectedAvatar) {
+                    avatarId
+                } else {
+                    currentState.emailAvatars.selectedAvatarId
+                },
+            )
+            currentState.copy(
+                emailAvatars = emailAvatars,
+            )
+        }
+    }
+
+    private suspend fun notifyAvatarDeletedSuccessfully(isSelectedAvatar: Boolean) {
+        _actions.send(AvatarPickerAction.AvatarSelected)
+        _uiState.update { currentState ->
+            currentState.copy(
+                avatarUpdates = if (isSelectedAvatar) {
+                    currentState.avatarUpdates.inc()
+                } else {
+                    currentState.avatarUpdates
+                },
+            )
         }
     }
 

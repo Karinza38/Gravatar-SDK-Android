@@ -9,11 +9,10 @@ plugins {
     alias(libs.plugins.publish.to.s3)
     alias(libs.plugins.openapi.generator)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.ksp)
 }
 
-val sdkVersion = providers.exec {
-    commandLine("git", "describe", "--tags", "--abbrev=0")
-}.standardOutput.asText.get().trim()
+val sdkVersion: String by rootProject.extra
 
 android {
     namespace = "com.gravatar"
@@ -73,10 +72,10 @@ android {
 
 dependencies {
     api(libs.okhttp)
-    implementation(libs.moshi.kotlin)
     implementation(libs.retrofit)
     implementation(libs.retrofit.moshi.converter)
     implementation(libs.kotlinx.coroutines)
+    ksp(libs.moshi.kotlin.codegen)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk.android)
@@ -115,6 +114,7 @@ openApiGenerate {
             "groupId" to "com.gravatar",
             "packageName" to "com.gravatar.restapi",
             "useCoroutines" to "true",
+            "moshiCodeGen" to "true",
         ),
     )
     importMappings.set(
