@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gravatar.extensions.defaultProfile
 import com.gravatar.quickeditor.R
 import com.gravatar.quickeditor.data.repository.EmailAvatars
+import com.gravatar.quickeditor.ui.components.AlertBanner
 import com.gravatar.quickeditor.ui.components.AvatarDeletionConfirmationDialog
 import com.gravatar.quickeditor.ui.components.AvatarOption
 import com.gravatar.quickeditor.ui.components.AvatarsSection
@@ -181,7 +183,6 @@ internal fun AvatarPicker(uiState: AvatarPickerUiState, onEvent: (AvatarPickerEv
     Surface(
         Modifier
             .fillMaxWidth()
-            .animateContentSize()
             .then(
                 if (uiState.avatarPickerContentLayout == AvatarPickerContentLayout.Horizontal) {
                     Modifier.verticalScroll(rememberScrollState())
@@ -197,64 +198,82 @@ internal fun AvatarPicker(uiState: AvatarPickerUiState, onEvent: (AvatarPickerEv
                     .fillMaxWidth()
                     .padding(bottom = 10.dp),
             )
+            AnimatedVisibility(visible = uiState.nonSelectedAvatarAlertVisible) {
+                AlertBanner(
+                    message = stringResource(id = R.string.gravatar_qe_alert_banner_no_avatar_selected),
+                    onClose = { onEvent(AvatarPickerEvent.AvatarDeleteAlertDismissed) },
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                )
+            }
             key(uiState.avatarUpdates) {
                 ProfileCard(
                     profile = uiState.profile,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
             }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
+            ) {
+                val sectionModifier = Modifier.padding(top = 24.dp, bottom = 10.dp)
+                when {
+                    uiState.isLoading -> Box(
+                        modifier = sectionModifier
+                            .height(loadingSectionHeight)
+                            .fillMaxWidth(),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                    }
 
-            val sectionModifier = Modifier.padding(top = 24.dp, bottom = 10.dp)
-            when {
-                uiState.isLoading -> Box(
-                    modifier = sectionModifier
-                        .height(loadingSectionHeight)
-                        .fillMaxWidth(),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                }
-
-                uiState.error != null -> ErrorSection(
-                    title = stringResource(id = uiState.error.titleRes),
-                    message = stringResource(id = uiState.error.messageRes),
-                    buttonText = stringResource(id = uiState.error.buttonTextRes),
-                    onButtonClick = { onEvent(uiState.error.event) },
-                    modifier = sectionModifier
-                        .padding(horizontal = 16.dp)
-                        .onSizeChanged { size ->
-                            loadingSectionHeight = size.height.pxToDp(context)
-                        },
-                )
-
-                uiState.avatarsSectionUiState != null ->
-                    AvatarsSection(
-                        state = uiState.avatarsSectionUiState,
-                        onAvatarSelected = { avatarUi ->
-                            when (avatarUi) {
-                                is AvatarUi.Local -> onEvent(AvatarPickerEvent.FailedAvatarTapped(avatarUi.uri))
-                                is AvatarUi.Uploaded -> onEvent(AvatarPickerEvent.AvatarSelected(avatarUi.avatar))
-                            }
-                        },
-                        onAvatarOptionClicked = { avatar, avatarOption ->
-                            when (avatarOption) {
-                                AvatarOption.ALT_TEXT -> Unit
-                                AvatarOption.DELETE -> {
-                                    confirmAvatarDeletion = avatar.imageId
-                                }
-
-                                AvatarOption.DOWNLOAD_IMAGE -> {
-                                    permissionAwareDownloadImageCallback(avatar)
-                                }
-                            }
-                        },
-                        onLocalImageSelected = { onEvent(AvatarPickerEvent.LocalImageSelected(it)) },
+                    uiState.error != null -> ErrorSection(
+                        title = stringResource(id = uiState.error.titleRes),
+                        message = stringResource(id = uiState.error.messageRes),
+                        buttonText = stringResource(id = uiState.error.buttonTextRes),
+                        onButtonClick = { onEvent(uiState.error.event) },
                         modifier = sectionModifier
                             .padding(horizontal = 16.dp)
-                            .fillMaxWidth()
                             .onSizeChanged { size ->
                                 loadingSectionHeight = size.height.pxToDp(context)
                             },
                     )
+
+                    uiState.avatarsSectionUiState != null ->
+                        AvatarsSection(
+                            state = uiState.avatarsSectionUiState,
+                            onAvatarSelected = { avatarUi ->
+                                when (avatarUi) {
+                                    is AvatarUi.Local -> onEvent(AvatarPickerEvent.FailedAvatarTapped(avatarUi.uri))
+                                    is AvatarUi.Uploaded -> onEvent(AvatarPickerEvent.AvatarSelected(avatarUi.avatar))
+                                }
+                            },
+                            onAvatarOptionClicked = { avatar, avatarOption ->
+                                when (avatarOption) {
+                                    AvatarOption.AltText -> Unit
+                                    AvatarOption.Delete -> {
+                                        confirmAvatarDeletion = avatar.imageId
+                                    }
+
+                                    AvatarOption.DownloadImage -> {
+                                        permissionAwareDownloadImageCallback(avatar)
+                                    }
+
+                                    is AvatarOption.Rating -> {
+                                        onEvent(
+                                            AvatarPickerEvent.AvatarRatingSelected(avatar.imageId, avatarOption.rating),
+                                        )
+                                    }
+                                }
+                            },
+                            onLocalImageSelected = { onEvent(AvatarPickerEvent.LocalImageSelected(it)) },
+                            modifier = sectionModifier
+                                .padding(horizontal = 16.dp)
+                                .fillMaxWidth()
+                                .onSizeChanged { size ->
+                                    loadingSectionHeight = size.height.pxToDp(context)
+                                },
+                        )
+                }
             }
         }
         FailedAvatarUploadAlertDialog(
@@ -306,7 +325,7 @@ private fun openDownloadManagerSettings(context: Context) {
     }
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 private fun AvatarPickerAction.handle(
     viewModel: AvatarPickerViewModel,
     cropperLauncher: CropperLauncher,
@@ -378,6 +397,26 @@ private fun AvatarPickerAction.handle(
                 )
             }
         }
+
+        is AvatarPickerAction.AvatarUpdateFailed -> {
+            scope.launch {
+                snackState.showQESnackbar(
+                    message = context.getString(this@handle.type.errorStringRes),
+                    withDismissAction = true,
+                    snackbarType = SnackbarType.Error,
+                )
+            }
+        }
+
+        is AvatarPickerAction.AvatarUpdated -> {
+            scope.launch {
+                snackState.showQESnackbar(
+                    message = context.getString(this@handle.type.successStringRes),
+                    withDismissAction = true,
+                    snackbarType = SnackbarType.Info,
+                )
+            }
+        }
     }
 }
 
@@ -418,6 +457,16 @@ private val SectionError.buttonTextRes: Int
         SectionError.ServerError,
         SectionError.Unknown,
         -> R.string.gravatar_qe_avatar_picker_error_retry_cta
+    }
+
+private val AvatarUpdateType.successStringRes: Int
+    @StringRes get() = when (this) {
+        AvatarUpdateType.RATING -> R.string.gravatar_qe_avatar_picker_rating_update_success
+    }
+
+private val AvatarUpdateType.errorStringRes: Int
+    @StringRes get() = when (this) {
+        AvatarUpdateType.RATING -> R.string.gravatar_qe_avatar_picker_rating_update_error
     }
 
 private val SectionError.event: AvatarPickerEvent

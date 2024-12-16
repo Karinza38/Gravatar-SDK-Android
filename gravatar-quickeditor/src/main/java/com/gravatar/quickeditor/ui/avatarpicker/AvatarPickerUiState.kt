@@ -23,6 +23,7 @@ internal data class AvatarPickerUiState(
     val failedUploadDialog: AvatarUploadFailure? = null,
     val avatarUpdates: Int = 0,
     val downloadManagerDisabled: Boolean = false,
+    val nonSelectedAvatarAlertVisible: Boolean = false,
 ) {
     val avatarsSectionUiState: AvatarsSectionUiState? = emailAvatars?.mapToUiModel()?.let {
         AvatarsSectionUiState(
@@ -98,3 +99,21 @@ internal sealed class AvatarUi(val avatarId: String) {
         val isLoading: Boolean,
     ) : AvatarUi(uri.toString())
 }
+
+internal val Avatar.Rating?.fullList: List<AvatarRating>
+    get() = listOf(
+        Avatar.Rating.G,
+        Avatar.Rating.PG,
+        Avatar.Rating.R,
+        Avatar.Rating.X,
+    ).map {
+        AvatarRating(
+            rating = it,
+            selected = it == this,
+        )
+    }
+
+internal data class AvatarRating(
+    val rating: Avatar.Rating,
+    val selected: Boolean,
+)

@@ -23,6 +23,11 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -45,6 +50,7 @@ internal class AvatarPickerViewModel(
 
     init {
         refresh()
+        nonAvatarSelectedAlertObserver()
     }
 
     fun onEvent(event: AvatarPickerEvent) {
@@ -65,6 +71,48 @@ internal class AvatarPickerViewModel(
             is AvatarPickerEvent.DownloadAvatarTapped -> downloadAvatar(event.avatar)
             AvatarPickerEvent.DownloadManagerDisabledDialogDismissed -> hideDownloadManagerAlert()
             is AvatarPickerEvent.AvatarDeleteSelected -> deleteAvatar(event.avatarId)
+            AvatarPickerEvent.AvatarDeleteAlertDismissed -> hideNonSelectedAvatarAlert()
+            is AvatarPickerEvent.AvatarRatingSelected -> updateAvatar(event.avatarId, event.rating)
+        }
+    }
+
+    private fun updateAvatar(avatarId: String, rating: Avatar.Rating? = null, altText: String? = null) {
+        viewModelScope.launch {
+            val oldAvatar: Avatar? = _uiState.value.emailAvatars?.avatars?.find { it.imageId == avatarId }
+            val updateType = AvatarUpdateType.RATING
+            _uiState.update { currentState ->
+                val emailAvatars = currentState.emailAvatars?.copy(
+                    avatars = currentState.emailAvatars.avatars.map { avatar ->
+                        if (avatar.imageId == avatarId) {
+                            avatar.copy(rating, altText)
+                        } else {
+                            avatar
+                        }
+                    },
+                )
+                currentState.copy(emailAvatars = emailAvatars)
+            }
+            when (avatarRepository.updateAvatar(email, avatarId, rating, altText)) {
+                is GravatarResult.Success -> {
+                    _actions.send(AvatarPickerAction.AvatarUpdated(updateType))
+                }
+
+                is GravatarResult.Failure -> {
+                    _uiState.update { currentState ->
+                        val emailAvatars = currentState.emailAvatars?.copy(
+                            avatars = currentState.emailAvatars.avatars.map { avatar ->
+                                if (avatar.imageId == avatarId) {
+                                    avatar.copy(oldAvatar?.rating, oldAvatar?.altText)
+                                } else {
+                                    avatar
+                                }
+                            },
+                        )
+                        currentState.copy(emailAvatars = emailAvatars)
+                    }
+                    _actions.send(AvatarPickerAction.AvatarUpdateFailed(updateType))
+                }
+            }
         }
     }
 
@@ -136,8 +184,9 @@ internal class AvatarPickerViewModel(
                 when (avatarRepository.selectAvatar(email, avatarId)) {
                     is GravatarResult.Success -> {
                         _uiState.update { currentState ->
+                            val emailAvatars = currentState.emailAvatars?.copy(selectedAvatarId = avatarId)
                             currentState.copy(
-                                emailAvatars = currentState.emailAvatars?.copy(selectedAvatarId = avatarId),
+                                emailAvatars = emailAvatars,
                                 selectingAvatarId = null,
                                 avatarUpdates = currentState.avatarUpdates.inc(),
                             )
@@ -162,6 +211,7 @@ internal class AvatarPickerViewModel(
         }
     }
 
+    @Suppress("LongMethod")
     private fun uploadAvatar(uri: Uri) {
         viewModelScope.launch {
             _uiState.update { currentState ->
@@ -180,21 +230,22 @@ internal class AvatarPickerViewModel(
                         _actions.send(AvatarPickerAction.AvatarSelected)
                     }
                     _uiState.update { currentState ->
+                        val emailAvatars = currentState.emailAvatars?.copy(
+                            avatars = buildList {
+                                add(avatar)
+                                addAll(
+                                    currentState.emailAvatars.avatars.filter { it.imageId != avatar.imageId },
+                                )
+                            },
+                            selectedAvatarId = if (avatar.selected == true) {
+                                avatar.imageId
+                            } else {
+                                currentState.emailAvatars.selectedAvatarId
+                            },
+                        )
                         currentState.copy(
                             uploadingAvatar = null,
-                            emailAvatars = currentState.emailAvatars?.copy(
-                                avatars = buildList {
-                                    add(avatar)
-                                    addAll(
-                                        currentState.emailAvatars.avatars.filter { it.imageId != avatar.imageId },
-                                    )
-                                },
-                                selectedAvatarId = if (avatar.selected == true) {
-                                    avatar.imageId
-                                } else {
-                                    currentState.emailAvatars.selectedAvatarId
-                                },
-                            ),
+                            emailAvatars = emailAvatars,
                             scrollToIndex = null,
                             avatarUpdates = if (avatar.selected == true) {
                                 currentState.avatarUpdates.inc()
@@ -280,6 +331,7 @@ internal class AvatarPickerViewModel(
         }
     }
 
+    @Suppress("LongMethod")
     private fun deleteAvatar(avatarId: String) {
         viewModelScope.launch {
             val avatarIndex = _uiState.value.emailAvatars?.avatars?.indexOfFirstOrNull { it.imageId == avatarId }
@@ -287,15 +339,16 @@ internal class AvatarPickerViewModel(
             val avatar = avatarIndex?.let { _uiState.value.emailAvatars?.avatars?.get(avatarIndex) }
             if (avatar != null) {
                 _uiState.update { currentState ->
+                    val emailAvatars = currentState.emailAvatars?.copy(
+                        avatars = currentState.emailAvatars.avatars.filter { it.imageId != avatarId },
+                        selectedAvatarId = if (currentState.emailAvatars.selectedAvatarId == avatarId) {
+                            null
+                        } else {
+                            currentState.emailAvatars.selectedAvatarId
+                        },
+                    )
                     currentState.copy(
-                        emailAvatars = currentState.emailAvatars?.copy(
-                            avatars = currentState.emailAvatars.avatars.filter { it.imageId != avatarId },
-                            selectedAvatarId = if (currentState.emailAvatars.selectedAvatarId == avatarId) {
-                                null
-                            } else {
-                                currentState.emailAvatars.selectedAvatarId
-                            },
-                        ),
+                        emailAvatars = emailAvatars,
                     )
                 }
                 when (val result = avatarRepository.deleteAvatar(email, avatarId)) {
@@ -323,17 +376,18 @@ internal class AvatarPickerViewModel(
     ) {
         _actions.send(AvatarPickerAction.AvatarDeletionFailed(avatarId))
         _uiState.update { currentState ->
+            val emailAvatars = currentState.emailAvatars?.copy(
+                avatars = currentState.emailAvatars.avatars.toMutableList().apply {
+                    add(avatarIndex, avatar)
+                },
+                selectedAvatarId = if (isSelectedAvatar) {
+                    avatarId
+                } else {
+                    currentState.emailAvatars.selectedAvatarId
+                },
+            )
             currentState.copy(
-                emailAvatars = currentState.emailAvatars?.copy(
-                    avatars = currentState.emailAvatars.avatars.toMutableList().apply {
-                        add(avatarIndex, avatar)
-                    },
-                    selectedAvatarId = if (isSelectedAvatar) {
-                        avatarId
-                    } else {
-                        currentState.emailAvatars.selectedAvatarId
-                    },
-                ),
+                emailAvatars = emailAvatars,
             )
         }
     }
@@ -349,6 +403,37 @@ internal class AvatarPickerViewModel(
                 },
             )
         }
+    }
+
+    private fun hideNonSelectedAvatarAlert() {
+        _uiState.update { currentState ->
+            currentState.copy(
+                nonSelectedAvatarAlertVisible = false,
+            )
+        }
+    }
+
+    private fun nonAvatarSelectedAlertObserver() {
+        _uiState
+            .filter { it.emailAvatars != null }
+            .map { it.emailAvatars?.selectedAvatarId != null }
+            .distinctUntilChanged()
+            .onEach { isAvatarSelected ->
+                if (isAvatarSelected) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            nonSelectedAvatarAlertVisible = false,
+                        )
+                    }
+                } else {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            nonSelectedAvatarAlertVisible = true,
+                        )
+                    }
+                }
+            }
+            .launchIn(viewModelScope)
     }
 
     private val QuickEditorError.asSectionError: SectionError
@@ -385,4 +470,15 @@ internal class AvatarPickerViewModelFactory(
 private inline fun <T> List<T>.indexOfFirstOrNull(predicate: (T) -> Boolean): Int? {
     val index = indexOfFirst { predicate(it) }
     return if (index == -1) null else index
+}
+
+internal fun Avatar.copy(rating: Avatar.Rating? = null, altText: String? = null): Avatar {
+    return Avatar {
+        imageId = this@copy.imageId
+        imageUrl = this@copy.imageUrl
+        updatedDate = this@copy.updatedDate
+        selected = this@copy.selected
+        this.altText = altText ?: this@copy.altText
+        this.rating = rating ?: this@copy.rating
+    }
 }

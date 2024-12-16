@@ -25,4 +25,8 @@ internal sealed class AvatarPickerEvent {
     data object DownloadManagerDisabledDialogDismissed : AvatarPickerEvent()
 
     data class AvatarDeleteSelected(val avatarId: String) : AvatarPickerEvent()
+
+    data object AvatarDeleteAlertDismissed : AvatarPickerEvent()
+
+    data class AvatarRatingSelected(val avatarId: String, val rating: Avatar.Rating) : AvatarPickerEvent()
 }

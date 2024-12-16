@@ -8,7 +8,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -22,7 +21,6 @@ internal fun LazyAvatarRow(
     onAvatarSelected: (AvatarUi) -> Unit,
     onAvatarOptionClicked: (Avatar, AvatarOption) -> Unit,
     horizontalArrangement: Arrangement.Horizontal,
-    parentBounds: Rect,
     state: LazyListState,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -36,7 +34,6 @@ internal fun LazyAvatarRow(
         items(items = avatars, key = { it.avatarId }) { avatarModel ->
             Avatar(
                 avatar = avatarModel,
-                parentBounds = parentBounds,
                 onAvatarSelected = { onAvatarSelected(avatarModel) },
                 onAvatarOptionClicked = { avatar, option -> onAvatarOptionClicked(avatar, option) },
                 size = avatarSize,
@@ -54,7 +51,6 @@ internal val avatarSize = 96.dp
 internal fun Avatar(
     avatar: AvatarUi,
     size: Dp,
-    parentBounds: Rect? = null,
     onAvatarSelected: () -> Unit,
     onAvatarOptionClicked: (Avatar, AvatarOption) -> Unit,
     modifier: Modifier,
@@ -64,9 +60,9 @@ internal fun Avatar(
             val sizePx = with(LocalDensity.current) { size.roundToPx() }
             SelectableAvatar(
                 imageUrl = avatar.imageUrlWithSize(sizePx),
+                rating = avatar.avatar.rating,
                 isSelected = avatar.isSelected,
                 loadingState = avatar.loadingState,
-                parentBounds = parentBounds,
                 onAvatarClicked = { onAvatarSelected() },
                 onAvatarOptionClicked = { onAvatarOptionClicked(avatar.avatar, it) },
                 modifier = modifier,
@@ -77,7 +73,6 @@ internal fun Avatar(
             imageUrl = avatar.uri.toString(),
             isSelected = false,
             loadingState = avatar.loadingState,
-            parentBounds = parentBounds,
             onAvatarClicked = { onAvatarSelected() },
             modifier = modifier,
         )

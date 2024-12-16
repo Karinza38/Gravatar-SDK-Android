@@ -12,17 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,9 +33,6 @@ internal fun HorizontalAvatarsSection(
     onTakePhotoClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var popupVisible by remember { mutableStateOf(false) }
-    var popupAnchorBounds: Rect by remember { mutableStateOf(Rect(Offset.Zero, Size.Zero)) }
-    var parentBounds by remember { mutableStateOf(Rect(Offset.Zero, Size.Zero)) }
     val listState = rememberLazyListState()
 
     LaunchedEffect(state.scrollToIndex) {
@@ -56,15 +43,11 @@ internal fun HorizontalAvatarsSection(
 
     val sectionPadding = 16.dp
     Surface(
-        modifier
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shape = RoundedCornerShape(8.dp),
-            )
-            .onGloballyPositioned { coordinates ->
-                parentBounds = coordinates.boundsInRoot()
-            },
+        modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            shape = RoundedCornerShape(8.dp),
+        ),
     ) {
         Box {
             Column(
@@ -90,38 +73,17 @@ internal fun HorizontalAvatarsSection(
                         onAvatarSelected = onAvatarSelected,
                         onAvatarOptionClicked = onAvatarOptionClicked,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        parentBounds = parentBounds,
                         modifier = Modifier.padding(vertical = 24.dp),
                         state = listState,
                         contentPadding = PaddingValues(horizontal = sectionPadding),
                     )
                 }
-                QEButton(
-                    buttonText = stringResource(id = R.string.gravatar_qe_avatar_picker_upload_image),
-                    onClick = { popupVisible = true },
+                UploadImageButton(
+                    onTakePhotoClick = onTakePhotoClick,
+                    onChoosePhotoClick = onChoosePhotoClick,
                     enabled = state.uploadButtonEnabled,
                     modifier = Modifier
-                        .padding(horizontal = sectionPadding)
-                        .onGloballyPositioned { layoutCoordinates ->
-                            popupAnchorBounds = layoutCoordinates.boundsInRoot()
-                        },
-                )
-            }
-            if (popupVisible) {
-                MediaPickerPopup(
-                    anchorAlignment = Alignment.CenterHorizontally,
-                    onDismissRequest = {
-                        popupVisible = false
-                    },
-                    anchorBounds = popupAnchorBounds,
-                    onChoosePhotoClick = {
-                        popupVisible = false
-                        onChoosePhotoClick()
-                    },
-                    onTakePhotoClick = {
-                        popupVisible = false
-                        onTakePhotoClick()
-                    },
+                        .padding(horizontal = sectionPadding),
                 )
             }
         }

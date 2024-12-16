@@ -23,18 +23,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gravatar.quickeditor.R
+import com.gravatar.quickeditor.ui.avatarpicker.fullList
+import com.gravatar.restapi.models.Avatar
 
 private val cornerRadius = 8.dp
 
@@ -43,14 +41,13 @@ internal fun SelectableAvatar(
     imageUrl: String,
     isSelected: Boolean,
     loadingState: AvatarLoadingState,
-    parentBounds: Rect? = null,
+    modifier: Modifier = Modifier,
+    rating: Avatar.Rating? = null,
     onAvatarClicked: () -> Unit,
     onAvatarOptionClicked: ((AvatarOption) -> Unit)? = null,
-    modifier: Modifier = Modifier,
 ) {
     val cornerRadius = 8.dp
     var moreOptionsPopupVisible by remember { mutableStateOf(false) }
-    var popupAnchorBounds: Rect by remember { mutableStateOf(Rect(Offset.Zero, Size.Zero)) }
     Box(
         modifier = modifier
             .aspectRatio(1f)
@@ -67,10 +64,6 @@ internal fun SelectableAvatar(
             )
             .clickable {
                 onAvatarClicked()
-            }
-            .onGloballyPositioned { layoutCoordinates ->
-                popupAnchorBounds = layoutCoordinates
-                    .boundsInRoot()
             },
     ) {
         AsyncImage(
@@ -91,9 +84,9 @@ internal fun SelectableAvatar(
 
         if (moreOptionsPopupVisible) {
             AvatarMoreOptionsPickerPopup(
+                avatarRating = rating.fullList,
                 anchorAlignment = Alignment.Start,
-                anchorBounds = popupAnchorBounds,
-                popupDrawArea = parentBounds,
+                offset = DpOffset(0.dp, 10.dp),
                 onDismissRequest = { moreOptionsPopupVisible = false },
                 onAvatarOptionClicked = { avatarOption ->
                     moreOptionsPopupVisible = false
