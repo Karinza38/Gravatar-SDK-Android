@@ -832,7 +832,7 @@ class AvatarPickerViewModelTest {
             )
 
             avatarPickerUiState = avatarPickerUiState.copy(
-                avatarUpdates = 1
+                avatarUpdates = 1,
             )
             assertEquals(
                 avatarPickerUiState,
