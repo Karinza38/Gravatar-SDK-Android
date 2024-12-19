@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.gravatar.quickeditor.QuickEditorContainer
 import com.gravatar.quickeditor.data.storage.TokenStorage
+import com.gravatar.services.ErrorType
 import com.gravatar.services.GravatarResult
 import com.gravatar.services.ProfileService
 import com.gravatar.types.Email
+import com.gravatar.ui.components.ComponentState
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class OAuthViewModel(
+    private val email: Email,
     private val tokenStorage: TokenStorage,
     private val profileService: ProfileService,
 ) : ViewModel() {
@@ -28,7 +31,7 @@ internal class OAuthViewModel(
     val actions = _actions.receiveAsFlow()
 
     init {
-        startOAuth()
+        fetchProfile()
     }
 
     fun startOAuth() {
@@ -69,15 +72,41 @@ internal class OAuthViewModel(
         }
     }
 
-    companion object {
-        val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
-                return OAuthViewModel(
-                    tokenStorage = QuickEditorContainer.getInstance().tokenStorage,
-                    profileService = QuickEditorContainer.getInstance().profileService,
-                ) as T
+    private fun fetchProfile() {
+        viewModelScope.launch {
+            _uiState.update { currentState -> currentState.copy(profile = ComponentState.Loading) }
+            when (val result = profileService.retrieveCatching(email)) {
+                is GravatarResult.Success -> {
+                    _uiState.update { currentState ->
+                        currentState.copy(profile = ComponentState.Loaded(result.value))
+                    }
+                }
+
+                is GravatarResult.Failure -> {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            profile = if (result.error is ErrorType.NotFound) {
+                                ComponentState.Empty
+                            } else {
+                                null
+                            },
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+internal class OAuthViewModelFactory(
+    private val email: Email,
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+        return OAuthViewModel(
+            email = email,
+            tokenStorage = QuickEditorContainer.getInstance().tokenStorage,
+            profileService = QuickEditorContainer.getInstance().profileService,
+        ) as T
     }
 }
