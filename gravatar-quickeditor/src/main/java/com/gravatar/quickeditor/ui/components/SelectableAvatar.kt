@@ -107,7 +107,7 @@ private fun LoadedOverlay(onMoreOptionsClicked: () -> Unit, modifier: Modifier =
             )
             .size(24.dp)
             .background(
-                color = Color.Black.copy(alpha = 0.3f),
+                color = Color.Black.copy(alpha = 0.5f),
                 shape = RoundedCornerShape(2.dp),
             )
             .padding(5.dp),
